@@ -25,13 +25,8 @@ package hudson.plugins.awsparameterstore;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
-
-import jenkins.tasks.SimpleBuildWrapper;
 
 import org.apache.commons.lang.StringUtils;
-
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,14 +34,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
-import org.powermock.api.easymock.PowerMock;
-import org.powermock.api.easymock.annotation.Mock;
 import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
+
+import jenkins.tasks.SimpleBuildWrapper;
 
 /**
  * Run tests for {@link AwsParameterStoreService}.
@@ -56,7 +49,7 @@ import org.powermock.modules.junit4.PowerMockRunnerDelegate;
  */
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(value = Parameterized.class)
-@PrepareForTest({AwsParameterStoreBuildWrapper.class})
+@PrepareForTest({ AwsParameterStoreBuildWrapper.class })
 public class AwsParameterStoreBuildWrapperTest {
 
   private final static String CREDENTIALS_AWS_ADMIN = "aws-admin";
@@ -75,34 +68,11 @@ public class AwsParameterStoreBuildWrapperTest {
   @Parameter(4)
   public String namePrefixes;
 
-
   @Parameters
   public static Collection<Object[]> data() {
-    return Arrays.asList(
-      new Object[][] {
-        {
-          "/service/",
-          false,
-          CREDENTIALS_AWS_ADMIN,
-          "basename",
-          ""
-        },
-        {
-          null,
-          true,
-          CREDENTIALS_AWS_NO_DESCRIBE,
-          "relative",
-          ""
-        },
-        {
-          null,
-          false,
-          CREDENTIALS_AWS_NO_DESCRIBE,
-          "",
-          "name_prefix"
-        }
-      }
-    );
+    return Arrays.asList(new Object[][] { { "/service/", false, CREDENTIALS_AWS_ADMIN, "basename", "" },
+        { null, true, CREDENTIALS_AWS_NO_DESCRIBE, "relative", "" },
+        { null, false, CREDENTIALS_AWS_NO_DESCRIBE, "", "name_prefix" } });
   }
 
   /**
@@ -118,7 +88,8 @@ public class AwsParameterStoreBuildWrapperTest {
    */
   @Test
   public void testConstructor() {
-    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes, new HashSet<String>());
+    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId,
+        REGION_NAME, path, recursive, naming, namePrefixes);
     Assert.assertEquals("credentialsId", credentialsId, awsParameterStoreBuildWrapper.getCredentialsId());
     Assert.assertEquals("regionName", REGION_NAME, awsParameterStoreBuildWrapper.getRegionName());
     Assert.assertEquals("path", path, awsParameterStoreBuildWrapper.getPath());
@@ -145,7 +116,8 @@ public class AwsParameterStoreBuildWrapperTest {
     Assert.assertEquals("path", path, awsParameterStoreBuildWrapper.getPath());
     Assert.assertEquals("recursive", recursive, awsParameterStoreBuildWrapper.getRecursive());
     Assert.assertEquals("naming", naming, awsParameterStoreBuildWrapper.getNaming());
-    Assert.assertEquals("namePrefixes", StringUtils.stripToNull(namePrefixes), awsParameterStoreBuildWrapper.getNamePrefixes());
+    Assert.assertEquals("namePrefixes", StringUtils.stripToNull(namePrefixes),
+        awsParameterStoreBuildWrapper.getNamePrefixes());
   }
 
   /**
@@ -153,22 +125,24 @@ public class AwsParameterStoreBuildWrapperTest {
    */
   @Test
   public void testSetup() {
-    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes, new HashSet<String>());
+    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId,
+        REGION_NAME, path, recursive, naming, namePrefixes);
     try {
-      awsParameterStoreBuildWrapper.setUp((SimpleBuildWrapper.Context)null, null, null, null, null, null);
-    } catch(Exception e) {
+      awsParameterStoreBuildWrapper.setUp((SimpleBuildWrapper.Context) null, null, null, null, null, null);
+    } catch (Exception e) {
       Assert.fail("Unexpected exception: " + e.getMessage());
     }
   }
 
   /**
-   * Mocks the<code>AwsParameterStoreService</code> class to prevent lots of AWS interaction.
+   * Mocks the<code>AwsParameterStoreService</code> class to prevent lots of AWS
+   * interaction.
    */
   private void mockAwsParameterStoreService() {
     AwsParameterStoreService awsParameterStoreService = PowerMockito.mock(AwsParameterStoreService.class);
     try {
       PowerMockito.whenNew(AwsParameterStoreService.class).withAnyArguments().thenReturn(awsParameterStoreService);
-    } catch(Exception e) {
+    } catch (Exception e) {
       Assert.fail("Unexpected exception: " + e.getMessage());
     }
   }
