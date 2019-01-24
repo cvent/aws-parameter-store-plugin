@@ -31,7 +31,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import com.amazonaws.regions.Region;
@@ -67,7 +66,7 @@ import jenkins.tasks.SimpleBuildWrapper;
 public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   private static final Logger LOGGER = Logger.getLogger(AwsParameterStoreBuildWrapper.class.getName());
-  private static final String secureStringType = "SecureString";
+  private static final String SECURE_STRING_TYPE = "SecureString";
 
   private String credentialsId;
   private String regionName;
@@ -75,7 +74,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   private Boolean recursive;
   private String naming;
   private String namePrefixes;
-  private AtomicBoolean fetchedParams;
+  private Boolean hideSecureStrings;
   private Set<String> secrets;
 
   /**
@@ -83,43 +82,37 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    */
   @DataBoundConstructor
   public AwsParameterStoreBuildWrapper() {
-    this(null, null, null, false, null, null);
+    this(null, null, null, false, null, null, false);
   }
 
   /**
    * Creates a new {@link AwsParameterStoreBuildWrapper}.
    *
-   * @param credentialsId aws credentials id
-   * @param regionName    aws region name
-   * @param path          hierarchy for the parameter
-   * @param recursive     fetch all parameters within a hierarchy
-   * @param naming        environment variable naming: basename, absolute,
-   *                      relative
-   * @param namePrefixes  filter parameters by Name with beginsWith filter
+   * @param credentialsId     aws credentials id
+   * @param regionName        aws region name
+   * @param path              hierarchy for the parameter
+   * @param recursive         fetch all parameters within a hierarchy
+   * @param naming            environment variable naming: basename, absolute,
+   *                          relative
+   * @param namePrefixes      filter parameters by Name with beginsWith filter
+   * @param hideSecureStrings remove secure string values from the console
    */
   @Deprecated
   public AwsParameterStoreBuildWrapper(String credentialsId, String regionName, String path, Boolean recursive,
-      String naming, String namePrefixes) {
+      String naming, String namePrefixes, Boolean hideSecureStrings) {
     this.credentialsId = credentialsId;
     this.regionName = regionName;
     this.path = path;
     this.recursive = recursive;
     this.naming = naming;
     this.namePrefixes = namePrefixes;
-  }
-
-  synchronized private AtomicBoolean getFetchedParams() {
-    if (null == fetchedParams) {
-      fetchedParams = new AtomicBoolean(false);
-    }
-    return fetchedParams;
+    this.hideSecureStrings = hideSecureStrings;
   }
 
   synchronized private Set<String> getSecrets() {
     if (null == secrets) {
       secrets = Collections.synchronizedSet(new HashSet<String>());
     }
-
     return secrets;
   }
 
@@ -237,11 +230,30 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
     this.namePrefixes = StringUtils.stripToNull(namePrefixes);
   }
 
+  /**
+   * Gets hideSecureStrings flag
+   * 
+   * @return the hideSecureStrings
+   */
+  public Boolean getHideSecureStrings() {
+    return hideSecureStrings;
+  }
+
+  /**
+   * Sets the hideSecureStrings flag
+   * 
+   * @param hideSecureStrings the hideSecureStrings to set
+   */
+  @DataBoundSetter
+  public void setHideSecureStrings(Boolean hideSecureStrings) {
+    this.hideSecureStrings = hideSecureStrings;
+  }
+
   private void addSecrets(List<Parameter> params) {
     Set<String> secrets = getSecrets();
     synchronized (secrets) {
       for (Parameter param : params) {
-        if (StringUtils.equals(secureStringType, param.getType())) {
+        if (StringUtils.equals(SECURE_STRING_TYPE, param.getType())) {
           secrets.add(param.getValue());
         }
       }
@@ -252,10 +264,12 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   public void setUp(Context context, Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener,
       EnvVars initialEnvironment) throws IOException, InterruptedException {
     AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, regionName);
-    LOGGER.info("Fetching Parameters");
+    LOGGER.fine("Fetching Parameters");
     List<Parameter> params = awsParameterStoreService.fetchParameters(path, recursive, namePrefixes);
-    addSecrets(params);
-    LOGGER.info(String.format("Fetched Parameters. Retrieved %d", params.size()));
+    if (hideSecureStrings) {
+      addSecrets(params);
+    }
+    LOGGER.fine(String.format("Fetched Parameters. Retrieved %d", params.size()));
     awsParameterStoreService.buildEnvVars(context, path, naming, params);
   }
 
