@@ -37,11 +37,7 @@ import com.amazonaws.services.simplesystemsmanagement.model.ParameterMetadata;
 
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildWrapper;
@@ -282,7 +278,7 @@ public class AwsParameterStoreServiceTest {
   public void testBuildEnvVars() {
     SimpleBuildWrapper.Context context = new SimpleBuildWrapper.Context();
     AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, REGION_NAME);
-    awsParameterStoreService.buildEnvVars(context, path, recursive, naming, namePrefixes);
+    awsParameterStoreService.buildEnvVars(context, path, recursive, naming, namePrefixes, new HashSet<String>());
     for(int i = 0; i < expected.length; i++) {
       Assert.assertEquals(parameters[i][NAME], expected[i][VALUE], context.getEnv().get(expected[i][NAME]));
     }

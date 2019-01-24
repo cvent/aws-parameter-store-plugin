@@ -25,6 +25,7 @@ package hudson.plugins.awsparameterstore;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 
 import jenkins.tasks.SimpleBuildWrapper;
 
@@ -117,7 +118,7 @@ public class AwsParameterStoreBuildWrapperTest {
    */
   @Test
   public void testConstructor() {
-    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes);
+    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes, new HashSet<String>());
     Assert.assertEquals("credentialsId", credentialsId, awsParameterStoreBuildWrapper.getCredentialsId());
     Assert.assertEquals("regionName", REGION_NAME, awsParameterStoreBuildWrapper.getRegionName());
     Assert.assertEquals("path", path, awsParameterStoreBuildWrapper.getPath());
@@ -152,7 +153,7 @@ public class AwsParameterStoreBuildWrapperTest {
    */
   @Test
   public void testSetup() {
-    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes);
+    AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId, REGION_NAME, path, recursive, naming, namePrefixes, new HashSet<String>());
     try {
       awsParameterStoreBuildWrapper.setUp((SimpleBuildWrapper.Context)null, null, null, null, null, null);
     } catch(Exception e) {

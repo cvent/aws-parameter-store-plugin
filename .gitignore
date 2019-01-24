@@ -1,2 +1,8 @@
 target
 work
+.classpath
+.factorypath
+.idea
+.project
+.settings
+*.iml
