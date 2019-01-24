@@ -292,7 +292,6 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   public static final class DescriptorImpl extends BuildWrapperDescriptor {
     @Override
     public String getDisplayName() {
-      // return "With AWS Parameter Store";
       return Messages.displayName();
     }
 
