@@ -28,9 +28,10 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Logger;
 
 import com.amazonaws.regions.Region;
@@ -111,7 +112,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   synchronized private Set<String> getSecrets() {
     if (null == secrets) {
-      secrets = Collections.synchronizedSet(new HashSet<String>());
+      secrets = new CopyOnWriteArraySet<>();
     }
     return secrets;
   }
@@ -232,7 +233,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Gets hideSecureStrings flag
-   * 
+   *
    * @return the hideSecureStrings
    */
   public Boolean getHideSecureStrings() {
@@ -241,7 +242,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Sets the hideSecureStrings flag
-   * 
+   *
    * @param hideSecureStrings the hideSecureStrings to set
    */
   @DataBoundSetter
@@ -249,15 +250,14 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
     this.hideSecureStrings = hideSecureStrings;
   }
 
-  private void addSecrets(List<Parameter> params) {
-    Set<String> secrets = getSecrets();
-    synchronized (secrets) {
-      for (Parameter param : params) {
-        if (StringUtils.equals(SECURE_STRING_TYPE, param.getType())) {
-          secrets.add(param.getValue());
-        }
+  synchronized private void addSecrets(List<Parameter> params) {
+    List<String> secrets = new LinkedList<>();
+    for (Parameter param : params) {
+      if (StringUtils.equals(SECURE_STRING_TYPE, param.getType())) {
+        secrets.add(param.getValue());
       }
     }
+    getSecrets().addAll(secrets);
   }
 
   @Override
