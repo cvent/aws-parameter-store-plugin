@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -15,7 +16,7 @@ import hudson.console.LineTransformationOutputStream;
 public class AwsParameterStoreOutputStream extends LineTransformationOutputStream {
     private static final Logger LOGGER = Logger.getLogger(AwsParameterStoreBuildWrapper.class.getName());
 
-    private final static String MASKED_PASSWORD = "********";
+    private static final String MASKED_PASSWORD = "********";
 
     private final OutputStream logger;
     private Pattern secureStringsAsPattern;
@@ -56,8 +57,8 @@ public class AwsParameterStoreOutputStream extends LineTransformationOutputStrea
                 secureStringsAsPattern = Pattern.compile(regex.toString());
                 lastCount = numSecureStrings;
                 try {
-                    logger.write(
-                            String.format("----- Now Redacting %d Secrets -----\n", secureStrings.size()).getBytes());
+                    logger.write(String.format("----- Now Redacting %d Secrets -----%n", secureStrings.size())
+                            .getBytes(StandardCharsets.US_ASCII));
                 } catch (IOException e) {
                 }
             } else {
@@ -69,12 +70,12 @@ public class AwsParameterStoreOutputStream extends LineTransformationOutputStrea
 
     @Override
     protected void eol(byte[] bytes, int len) throws IOException {
-        String line = new String(bytes, 0, len);
+        String line = new String(bytes, StandardCharsets.US_ASCII);
         Pattern secureStringsAsPattern = getSecureStringsAsPattern(logger);
         if (secureStringsAsPattern != null) {
             line = secureStringsAsPattern.matcher(line).replaceAll(MASKED_PASSWORD);
         }
-        logger.write(line.getBytes());
+        logger.write(line.getBytes(StandardCharsets.US_ASCII));
     }
 
     /**
