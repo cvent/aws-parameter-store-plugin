@@ -277,7 +277,7 @@ public class AwsParameterStoreService {
         for (int i = start; i < name.length(); i++) {
             char c = name.charAt(i);
             if (Character.isLetter(c)) {
-                environmentVariable.append(Character.toUpperCase(c));
+                environmentVariable.append(c);
             } else if (Character.isDigit(c)) {
                 environmentVariable.append(c);
             } else {

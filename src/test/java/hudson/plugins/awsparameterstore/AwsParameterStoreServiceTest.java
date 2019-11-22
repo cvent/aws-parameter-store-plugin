@@ -97,67 +97,68 @@ public class AwsParameterStoreServiceTest {
   @Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(new Object[][] { { /* normal */
-        new String[][] { { "name1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
-        new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" } }, CREDENTIALS_AWS_ADMIN },
+        new String[][] { { "NAME1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
+        new String[][] { { "NAME1", "value1" }, { "name2", "value2" } }, CREDENTIALS_AWS_ADMIN },
         { /* non-alphanumerics */
             new String[][] { { "*X()_test", "value1" }, { "123abCD", "value2" }, { "name3", "value3" } }, null, false,
             "basename", "",
-            new String[][] { { "_X___TEST", "value1" }, { "123ABCD", "value2" }, { "NAME3", "value3" } },
+            new String[][] { { "_X___test", "value1" }, { "123abCD", "value2" }, { "name3", "value3" } },
             CREDENTIALS_AWS_ADMIN },
         { /* naming = null test */
             new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" },
                 { "/ignore/name3", "value3" } },
             "/service/", true, null, "",
-            new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" }, { "NAME3", null } }, CREDENTIALS_AWS_ADMIN },
+            new String[][] { { "name1", "value1" }, { "name2", "value2" }, { "name3", null } },
+                CREDENTIALS_AWS_ADMIN },
         { /* naming = basename test */
             new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" },
                 { "/ignore/name3", "value3" } },
             "/service/", true, "basename", "",
-            new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" }, { "NAME3", null } }, CREDENTIALS_AWS_ADMIN },
+            new String[][] { { "name1", "value1" }, { "name2", "value2" }, { "name3", null } }, CREDENTIALS_AWS_ADMIN },
         { /* naming = basename test - no trailing '/' */
             new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" },
                 { "/ignore/name3", "value3" } },
             "/service", true, "basename", "",
-            new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" }, { "NAME3", null } }, CREDENTIALS_AWS_ADMIN },
+            new String[][] { { "name1", "value1" }, { "name2", "value2" }, { "name3", null } }, CREDENTIALS_AWS_ADMIN },
         { /* naming = absolute test */
             new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" } }, "/service/", true,
-            "absolute", "", new String[][] { { "SERVICE_NAME1", "value1" }, { "SERVICE_NAME2", "value2" } },
+            "absolute", "", new String[][] { { "service_name1", "value1" }, { "service_name2", "value2" } },
             CREDENTIALS_AWS_ADMIN },
         { /* naming = absolute test - no trailing '/' */
             new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" } }, "/service", true,
-            "absolute", "", new String[][] { { "SERVICE_NAME1", "value1" }, { "SERVICE_NAME2", "value2" } },
+            "absolute", "", new String[][] { { "service_name1", "value1" }, { "service_name2", "value2" } },
             CREDENTIALS_AWS_ADMIN },
         { /* naming = relative test */
             new String[][] { { "/service/app/name1", "value1" }, { "/service/name2", "value2" } }, "/service/", true,
-            "relative", "", new String[][] { { "APP_NAME1", "value1" }, { "NAME2", "value2" } },
+            "relative", "", new String[][] { { "app_name1", "value1" }, { "name2", "value2" } },
             CREDENTIALS_AWS_ADMIN },
         { /* naming = relative test - no trailing '/' */
             new String[][] { { "/service/app/name1", "value1" }, { "/service/name2", "value2" } }, "/service", true,
-            "relative", "", new String[][] { { "APP_NAME1", "value1" }, { "NAME2", "value2" } },
+            "relative", "", new String[][] { { "app_name1", "value1" }, { "name2", "value2" } },
             CREDENTIALS_AWS_ADMIN },
         { /* namePrefixes = single exact value */
             new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } }, null, false, null,
-            "prefix1_name1", new String[][] { { "PREFIX1_NAME1", "value1" } }, CREDENTIALS_AWS_ADMIN },
+            "prefix1_name1", new String[][] { { "prefix1_name1", "value1" } }, CREDENTIALS_AWS_ADMIN },
         { /* namePrefixes = single prefix value */
             new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } }, null, false, null,
-            "prefix", new String[][] { { "PREFIX1_NAME1", "value1" }, { "PREFIX2_NAME2", "value2" } },
+            "prefix", new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
             CREDENTIALS_AWS_ADMIN },
         { /* namePrefixes = comma separated multi prefix value */
             new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } }, null, false, null,
-            "prefix1,prefix2_name2", new String[][] { { "PREFIX1_NAME1", "value1" }, { "PREFIX2_NAME2", "value2" } },
+            "prefix1,prefix2_name2", new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
             CREDENTIALS_AWS_ADMIN },
         { /* empty values */
             new String[][] { { "name1", "" }, { "name2", null }, { "name3", "value3" } }, null, false, "basename", "",
-            new String[][] { { "NAME1", "" }, { "NAME2", null }, { "NAME3", "value3" } }, CREDENTIALS_AWS_ADMIN },
+            new String[][] { { "name1", "" }, { "name2", null }, { "name3", "value3" } }, CREDENTIALS_AWS_ADMIN },
         { /* no describe */
             new String[][] { { "name1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
-            new String[][] { { "NAME1", null }, { "NAME2", null } }, CREDENTIALS_AWS_NO_DESCRIBE },
+            new String[][] { { "name1", null }, { "name2", null } }, CREDENTIALS_AWS_NO_DESCRIBE },
         { /* no get-parameter */
             new String[][] { { "name1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
-            new String[][] { { "NAME1", null }, { "NAME2", "value2" } }, CREDENTIALS_AWS_NO_GET },
+            new String[][] { { "name1", null }, { "name2", "value2" } }, CREDENTIALS_AWS_NO_GET },
         { /* no get-parameter-by-path */
             new String[][] { { "name1", "value1" }, { "name2", "value2" } }, "/service/", true, "basename", "",
-            new String[][] { { "NAME1", null }, { "NAME2", null } }, CREDENTIALS_AWS_NO_GETBYPATH } });
+            new String[][] { { "name1", null }, { "name2", null } }, CREDENTIALS_AWS_NO_GETBYPATH } });
   }
 
   /**
