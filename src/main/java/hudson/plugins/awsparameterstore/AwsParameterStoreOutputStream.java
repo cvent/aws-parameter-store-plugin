@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -58,7 +57,7 @@ public class AwsParameterStoreOutputStream extends LineTransformationOutputStrea
                 lastCount = numSecureStrings;
                 try {
                     logger.write(String.format("----- Now Redacting %d Secrets -----%n", secureStrings.size())
-                            .getBytes(StandardCharsets.US_ASCII));
+                            .getBytes());
                 } catch (IOException e) {
                 }
             } else {
@@ -70,12 +69,12 @@ public class AwsParameterStoreOutputStream extends LineTransformationOutputStrea
 
     @Override
     protected void eol(byte[] bytes, int len) throws IOException {
-        String line = new String(bytes, StandardCharsets.US_ASCII);
+        String line = new String(bytes, 0, len);
         Pattern secureStringsAsPattern = getSecureStringsAsPattern(logger);
         if (secureStringsAsPattern != null) {
             line = secureStringsAsPattern.matcher(line).replaceAll(MASKED_PASSWORD);
         }
-        logger.write(line.getBytes(StandardCharsets.US_ASCII));
+        logger.write(line.getBytes());
     }
 
     /**
