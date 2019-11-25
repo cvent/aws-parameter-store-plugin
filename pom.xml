@@ -32,7 +32,7 @@
   </parent>
 
   <artifactId>aws-parameter-store</artifactId>
-  <version>1.2.2-SNAPSHOT</version>
+  <version>1.2.3-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>AWS Parameter Store Build Wrapper</name>
