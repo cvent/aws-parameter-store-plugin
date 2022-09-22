@@ -69,12 +69,14 @@ public class AwsParameterStoreBuildWrapperTest {
   public String namePrefixes;
   @Parameter(5)
   public Boolean hideSecureStrings;
+  @Parameter(6)
+  public String option;
 
   @Parameters
   public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[][] { { "/service/", false, CREDENTIALS_AWS_ADMIN, "basename", "", true },
-        { null, true, CREDENTIALS_AWS_NO_DESCRIBE, "relative", "", true },
-        { null, false, CREDENTIALS_AWS_NO_DESCRIBE, "", "name_prefix", false } });
+    return Arrays.asList(new Object[][] { { "/service/", false, CREDENTIALS_AWS_ADMIN, "basename", "", true, "BeginsWith" },
+        { null, true, CREDENTIALS_AWS_NO_DESCRIBE, "relative", "", true, "BeginsWith" },
+        { null, false, CREDENTIALS_AWS_NO_DESCRIBE, "", "name_prefix", false, "Equals" } });
   }
 
   /**
@@ -91,7 +93,7 @@ public class AwsParameterStoreBuildWrapperTest {
   @Test
   public void testConstructor() {
     AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId,
-        REGION_NAME, path, recursive, naming, namePrefixes, hideSecureStrings);
+        REGION_NAME, path, recursive, naming, namePrefixes, hideSecureStrings, );
     Assert.assertEquals("credentialsId", credentialsId, awsParameterStoreBuildWrapper.getCredentialsId());
     Assert.assertEquals("regionName", REGION_NAME, awsParameterStoreBuildWrapper.getRegionName());
     Assert.assertEquals("path", path, awsParameterStoreBuildWrapper.getPath());
@@ -99,6 +101,7 @@ public class AwsParameterStoreBuildWrapperTest {
     Assert.assertEquals("naming", naming, awsParameterStoreBuildWrapper.getNaming());
     Assert.assertEquals("namePrefixes", namePrefixes, awsParameterStoreBuildWrapper.getNamePrefixes());
     Assert.assertEquals("hideSecureStrings", hideSecureStrings, awsParameterStoreBuildWrapper.getHideSecureStrings());
+    Assert.assertEquals("option", option, awsParameterStoreBuildWrapper.getOption());
   }
 
   /**
@@ -114,6 +117,7 @@ public class AwsParameterStoreBuildWrapperTest {
     awsParameterStoreBuildWrapper.setNaming(naming);
     awsParameterStoreBuildWrapper.setNamePrefixes(namePrefixes);
     awsParameterStoreBuildWrapper.setHideSecureStrings(hideSecureStrings);
+    awsParameterStoreBuildWrapper.setOption(option;
 
     Assert.assertEquals("credentialsId", credentialsId, awsParameterStoreBuildWrapper.getCredentialsId());
     Assert.assertEquals("regionName", REGION_NAME, awsParameterStoreBuildWrapper.getRegionName());
@@ -123,6 +127,7 @@ public class AwsParameterStoreBuildWrapperTest {
     Assert.assertEquals("namePrefixes", StringUtils.stripToNull(namePrefixes),
         awsParameterStoreBuildWrapper.getNamePrefixes());
     Assert.assertEquals("hideSecureStrings", hideSecureStrings, awsParameterStoreBuildWrapper.getHideSecureStrings());
+    Assert.assertEquals("option", option, awsParameterStoreBuildWrapper.getOption());
   }
 
   /**
@@ -131,7 +136,7 @@ public class AwsParameterStoreBuildWrapperTest {
   @Test
   public void testSetup() {
     AwsParameterStoreBuildWrapper awsParameterStoreBuildWrapper = new AwsParameterStoreBuildWrapper(credentialsId,
-        REGION_NAME, path, recursive, naming, namePrefixes, hideSecureStrings);
+        REGION_NAME, path, recursive, naming, namePrefixes, hideSecureStrings, option);
     try {
       awsParameterStoreBuildWrapper.setUp((SimpleBuildWrapper.Context) null, null, null, null, null, null);
     } catch (Exception e) {

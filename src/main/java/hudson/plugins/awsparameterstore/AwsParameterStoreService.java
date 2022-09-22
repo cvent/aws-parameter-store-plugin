@@ -23,11 +23,6 @@
  */
 package hudson.plugins.awsparameterstore;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
@@ -41,12 +36,15 @@ import com.amazonaws.services.simplesystemsmanagement.model.ParameterMetadata;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterStringFilter;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
-
-import org.apache.commons.lang.StringUtils;
-
 import hudson.ProxyConfiguration;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildWrapper;
+import org.apache.commons.lang.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * AWS Parameter Store client.
@@ -136,15 +134,15 @@ public class AwsParameterStoreService {
         }
     }
 
-    public List<Parameter> fetchParameters(String path, Boolean recursive, String namePrefixes) {
+    public List<Parameter> fetchParameters(String path, Boolean recursive, String namePrefixes, String option) {
         if (StringUtils.isEmpty(path)) {
-            return fetchEnvVarsWithParameters(namePrefixes);
+            return fetchEnvVarsWithParameters(namePrefixes, option);
         } else {
             return fetchEnvVarsWithParametersByPath(path, recursive);
         }
     }
 
-    private List<Parameter> fetchEnvVarsWithParameters(String namePrefixes) {
+    private List<Parameter> fetchEnvVarsWithParameters(String namePrefixes, String option) {
         final AWSSimpleSystemsManagement client = getAWSSimpleSystemsManagement();
         final List<String> names = new ArrayList<String>();
         final List<Parameter> parameters = new ArrayList<>();
@@ -153,7 +151,7 @@ public class AwsParameterStoreService {
             DescribeParametersRequest describeParametersRequest = new DescribeParametersRequest().withMaxResults(1);
             if (!StringUtils.isEmpty(namePrefixes)) {
                 describeParametersRequest = describeParametersRequest.withParameterFilters(new ParameterStringFilter()
-                        .withKey("Name").withOption("BeginsWith").withValues(namePrefixes.split(",")));
+                        .withKey("Name").withOption(option).withValues(namePrefixes.split(",")));
             }
 
             do {

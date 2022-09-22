@@ -69,6 +69,8 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   private static final Logger LOGGER = Logger.getLogger(AwsParameterStoreBuildWrapper.class.getName());
   private static final String SECURE_STRING_TYPE = "SecureString";
 
+  private static final String DEFAULT_OPTION = "BeginsWith";
+
   private String credentialsId;
   private String regionName;
   private String path;
@@ -77,13 +79,14 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   private String namePrefixes;
   private Boolean hideSecureStrings;
   private Set<String> secrets;
+  private String option;
 
   /**
    * Creates a new {@link AwsParameterStoreBuildWrapper}.
    */
   @DataBoundConstructor
   public AwsParameterStoreBuildWrapper() {
-    this(null, null, null, false, null, null, false);
+    this(null, null, null, false, null, null, false, null);
   }
 
   /**
@@ -97,10 +100,11 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
    *                          relative
    * @param namePrefixes      filter parameters by Name with beginsWith filter
    * @param hideSecureStrings remove secure string values from the console
+   * @param option            option for filter operation
    */
   @Deprecated
   public AwsParameterStoreBuildWrapper(String credentialsId, String regionName, String path, Boolean recursive,
-      String naming, String namePrefixes, Boolean hideSecureStrings) {
+      String naming, String namePrefixes, Boolean hideSecureStrings, String option) {
     this.credentialsId = credentialsId;
     this.regionName = regionName;
     this.path = path;
@@ -108,6 +112,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
     this.naming = naming;
     this.namePrefixes = namePrefixes;
     this.hideSecureStrings = hideSecureStrings;
+    this.option = option != null ? option : DEFAULT_OPTION;
   }
 
   synchronized private Set<String> getSecrets() {
@@ -250,6 +255,22 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
     this.hideSecureStrings = hideSecureStrings;
   }
 
+  /**
+   * Gets option
+   * @return option
+   */
+  public String getOption() {
+    return option;
+  }
+
+  /**
+   * Sets the option parameter
+   */
+  @DataBoundSetter
+  public void setOption(String option) {
+    this.option = option;
+  }
+
   synchronized private void addSecrets(List<Parameter> params) {
     List<String> secrets = new LinkedList<>();
     for (Parameter param : params) {
@@ -265,7 +286,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
       EnvVars initialEnvironment) throws IOException, InterruptedException {
     AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, regionName);
     LOGGER.fine("Fetching Parameters");
-    List<Parameter> params = awsParameterStoreService.fetchParameters(path, recursive, namePrefixes);
+    List<Parameter> params = awsParameterStoreService.fetchParameters(path, recursive, namePrefixes, option);
     if (hideSecureStrings) {
       addSecrets(params);
     }
