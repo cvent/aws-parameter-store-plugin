@@ -23,37 +23,40 @@
   */
 package hudson.plugins.awsparameterstore;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.Logger;
+
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
-
+import com.amazonaws.services.simplesystemsmanagement.model.Parameter;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
+
+import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
+import hudson.console.ConsoleLogFilter;
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.ListBoxModel;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.logging.Logger;
-
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildWrapper;
-
-import org.apache.commons.lang.StringUtils;
-
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
-import org.jenkinsci.Symbol;
 
 /**
  * A Jenkins {@link hudson.tasks.BuildWrapper} for AWS Parameter Store.
@@ -64,6 +67,7 @@ import org.jenkinsci.Symbol;
 public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   private static final Logger LOGGER = Logger.getLogger(AwsParameterStoreBuildWrapper.class.getName());
+  private static final String SECURE_STRING_TYPE = "SecureString";
 
   private String credentialsId;
   private String regionName;
@@ -71,39 +75,51 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   private Boolean recursive;
   private String naming;
   private String namePrefixes;
-
-  private transient AwsParameterStoreService parameterStoreService;
+  private Boolean hideSecureStrings;
+  private Set<String> secrets;
 
   /**
    * Creates a new {@link AwsParameterStoreBuildWrapper}.
    */
   @DataBoundConstructor
   public AwsParameterStoreBuildWrapper() {
-    this(null, null, null, false, null, null);
+    this(null, null, null, false, null, null, false);
   }
 
   /**
    * Creates a new {@link AwsParameterStoreBuildWrapper}.
    *
-   * @param credentialsId   aws credentials id
-   * @param regionName      aws region name
-   * @param path            hierarchy for the parameter
-   * @param recursive       fetch all parameters within a hierarchy
-   * @param naming          environment variable naming: basename, absolute, relative
-   * @param namePrefixes    filter parameters by Name with beginsWith filter
+   * @param credentialsId     aws credentials id
+   * @param regionName        aws region name
+   * @param path              hierarchy for the parameter
+   * @param recursive         fetch all parameters within a hierarchy
+   * @param naming            environment variable naming: basename, absolute,
+   *                          relative
+   * @param namePrefixes      filter parameters by Name with beginsWith filter
+   * @param hideSecureStrings remove secure string values from the console
    */
   @Deprecated
-  public AwsParameterStoreBuildWrapper(String credentialsId, String regionName, String path, Boolean recursive, String naming, String namePrefixes) {
+  public AwsParameterStoreBuildWrapper(String credentialsId, String regionName, String path, Boolean recursive,
+      String naming, String namePrefixes, Boolean hideSecureStrings) {
     this.credentialsId = credentialsId;
     this.regionName = regionName;
     this.path = path;
     this.recursive = recursive;
     this.naming = naming;
     this.namePrefixes = namePrefixes;
+    this.hideSecureStrings = hideSecureStrings;
+  }
+
+  synchronized private Set<String> getSecrets() {
+    if (null == secrets) {
+      secrets = new CopyOnWriteArraySet<>();
+    }
+    return secrets;
   }
 
   /**
    * Gets AWS credentials identifier.
+   *
    * @return AWS credentials identifier
    */
   public String getCredentialsId() {
@@ -113,7 +129,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   /**
    * Sets the AWS credentials identifier.
    *
-   * @param credentialsId  aws credentials id
+   * @param credentialsId aws credentials id
    */
   @DataBoundSetter
   public void setCredentialsId(String credentialsId) {
@@ -122,16 +138,17 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Gets AWS region name.
+   *
    * @return aws region name
    */
   public String getRegionName() {
-      return regionName;
+    return regionName;
   }
 
   /**
    * Sets the AWS region name.
    *
-   * @param regionName  aws region name
+   * @param regionName aws region name
    */
   @DataBoundSetter
   public void setRegionName(String regionName) {
@@ -140,16 +157,17 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Gets path.
+   *
    * @return path
    */
   public String getPath() {
-      return path;
+    return path;
   }
 
   /**
    * Sets the AWS Parameter Store hierarchy.
    *
-   * @param path  aws parameter store hierarchy
+   * @param path aws parameter store hierarchy
    */
   @DataBoundSetter
   public void setPath(String path) {
@@ -158,24 +176,26 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Gets recursive flag.
+   *
    * @return recursive
    */
   public Boolean getRecursive() {
-     return recursive;
-   }
+    return recursive;
+  }
 
-   /**
-    * Sets the recursive flag.
-    *
-    * @param recursive  recursive flag
-    */
-   @DataBoundSetter
-   public void setRecursive(Boolean recursive) {
-     this.recursive = recursive;
-   }
+  /**
+   * Sets the recursive flag.
+   *
+   * @param recursive recursive flag
+   */
+  @DataBoundSetter
+  public void setRecursive(Boolean recursive) {
+    this.recursive = recursive;
+  }
 
   /**
    * Gets naming: basename, absolute, relative.
+   *
    * @return naming.
    */
   public String getNaming() {
@@ -185,7 +205,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   /**
    * Sets the naming type: basename, absolute, relative.
    *
-   * @param naming  the naming type
+   * @param naming the naming type
    */
   @DataBoundSetter
   public void setNaming(String naming) {
@@ -194,6 +214,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Gets namePrefixes (comma separated)
+   *
    * @return namePrefixes.
    */
   public String getNamePrefixes() {
@@ -203,27 +224,86 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
   /**
    * Sets the name prefixes filter.
    *
-   * @param namePrefixes  name prefixes filter
+   * @param namePrefixes name prefixes filter
    */
   @DataBoundSetter
   public void setNamePrefixes(String namePrefixes) {
     this.namePrefixes = StringUtils.stripToNull(namePrefixes);
   }
 
-  @Override
-  public void setUp(Context context, Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener, EnvVars initialEnvironment) throws IOException, InterruptedException {
-    AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, regionName);
-    awsParameterStoreService.buildEnvVars(context, path, recursive, naming, namePrefixes);
+  /**
+   * Gets hideSecureStrings flag
+   *
+   * @return the hideSecureStrings
+   */
+  public Boolean getHideSecureStrings() {
+    return hideSecureStrings;
   }
 
   /**
-   * A Jenkins <code>BuildWrapperDescriptor</code> for the {@link AwsParameterStoreBuildWrapper}.
+   * Sets the hideSecureStrings flag
+   *
+   * @param hideSecureStrings the hideSecureStrings to set
+   */
+  @DataBoundSetter
+  public void setHideSecureStrings(Boolean hideSecureStrings) {
+    this.hideSecureStrings = hideSecureStrings;
+  }
+
+  synchronized private void addSecrets(List<Parameter> params) {
+    List<String> secrets = new LinkedList<>();
+    for (Parameter param : params) {
+      if (StringUtils.equals(SECURE_STRING_TYPE, param.getType())) {
+        secrets.add(param.getValue());
+      }
+    }
+    getSecrets().addAll(secrets);
+  }
+
+  @Override
+  public void setUp(Context context, Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener,
+      EnvVars initialEnvironment) throws IOException, InterruptedException {
+    AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, regionName);
+    LOGGER.fine("Fetching Parameters");
+    List<Parameter> params = awsParameterStoreService.fetchParameters(path, recursive, namePrefixes);
+    if (hideSecureStrings) {
+      addSecrets(params);
+    }
+    LOGGER.fine(String.format("Fetched Parameters. Retrieved %d", params.size()));
+    awsParameterStoreService.buildEnvVars(context, path, naming, params);
+  }
+
+  @Override
+  public ConsoleLogFilter createLoggerDecorator(Run<?, ?> build) {
+    return new FilterImpl(getSecrets());
+  }
+
+  private static final class FilterImpl extends ConsoleLogFilter implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+    private final Set<String> secrets;
+
+    FilterImpl(Set<String> secrets) {
+      this.secrets = secrets;
+    }
+
+    @Override
+    public OutputStream decorateLogger(AbstractBuild _ignore, OutputStream logger)
+        throws IOException, InterruptedException {
+      return new AwsParameterStoreOutputStream(logger, secrets);
+    }
+  }
+
+  /**
+   * A Jenkins <code>BuildWrapperDescriptor</code> for the
+   * {@link AwsParameterStoreBuildWrapper}.
    *
    * @author Rik Turnbull
    *
    */
-  @Extension @Symbol("withAWSParameterStore")
-  public static final class DescriptorImpl extends BuildWrapperDescriptor  {
+  @Extension
+  @Symbol("withAWSParameterStore")
+  public static final class DescriptorImpl extends BuildWrapperDescriptor {
     @Override
     public String getDisplayName() {
       return Messages.displayName();
@@ -231,6 +311,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
     /**
      * Returns a list of AWS credentials identifiers.
+     *
      * @return {@link ListBoxModel} populated with AWS credential identifiers
      */
     public ListBoxModel doFillCredentialsIdItems() {
@@ -239,18 +320,19 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
     /**
      * Returns a list of AWS region names.
+     *
      * @return {@link ListBoxModel} populated with AWS region names
      */
     public ListBoxModel doFillRegionNameItems() {
       final ListBoxModel options = new ListBoxModel();
       final List<String> regionNames = new ArrayList<String>();
       final List<Region> regions = RegionUtils.getRegions();
-      for(Region region : regions) {
+      for (Region region : regions) {
         regionNames.add(region.getName());
       }
       Collections.sort(regionNames);
       options.add("- select -", null);
-      for(String regionName : regionNames) {
+      for (String regionName : regionNames) {
         options.add(regionName);
       }
       return options;
@@ -258,6 +340,7 @@ public class AwsParameterStoreBuildWrapper extends SimpleBuildWrapper {
 
     /**
      * Returns a list of naming options: basename, absolute, relative.
+     *
      * @return {@link ListBoxModel} populated with AWS region names
      */
     public ListBoxModel doFillNamingItems() {

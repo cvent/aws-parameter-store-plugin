@@ -42,5 +42,8 @@
     <f:entry title="${%Name Prefixes}" field="namePrefixes" description="Comma separated name prefixes used to filter parameter by name">
       <f:textbox/>
     </f:entry>
+    <f:entry title="${%Hide Secure Strings}" field="hideSecureStrings" description="Remove secure string values from the console">
+      <f:checkbox/>
+    </f:entry>
   </f:advanced>
 </j:jelly>

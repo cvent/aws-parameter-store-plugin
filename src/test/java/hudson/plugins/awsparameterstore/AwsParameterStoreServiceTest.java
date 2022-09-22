@@ -23,8 +23,11 @@
   */
 package hudson.plugins.awsparameterstore;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
 import com.amazonaws.services.simplesystemsmanagement.model.AWSSimpleSystemsManagementException;
 import com.amazonaws.services.simplesystemsmanagement.model.DescribeParametersRequest;
@@ -34,23 +37,9 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParameterResult;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathResult;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterMetadata;
-
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import jenkins.model.Jenkins;
-import jenkins.tasks.SimpleBuildWrapper;
-
-import hudson.model.Hudson;
-
 import org.apache.commons.lang.StringUtils;
-import org.hamcrest.Matcher;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,15 +47,15 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
 import org.mockito.ArgumentMatcher;
-import org.powermock.api.easymock.PowerMock;
-import org.powermock.api.easymock.annotation.Mock;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
+
+import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildWrapper;
 
 /**
  * Run tests for {@link AwsParameterStoreService}.
@@ -76,7 +65,8 @@ import org.powermock.modules.junit4.PowerMockRunnerDelegate;
  */
 @RunWith(PowerMockRunner.class)
 @PowerMockRunnerDelegate(value = Parameterized.class)
-@PrepareForTest(value={AwsParameterStoreService.class, Jenkins.class, AWSCredentialsHelper.class},fullyQualifiedNames={"com.amazonaws.services.simplesystemsmanagement.*"})
+@PrepareForTest(value = { AwsParameterStoreService.class, Jenkins.class,
+    AWSCredentialsHelper.class }, fullyQualifiedNames = { "com.amazonaws.services.simplesystemsmanagement.*" })
 public class AwsParameterStoreServiceTest {
 
   private final static int NAME = 0;
@@ -106,154 +96,69 @@ public class AwsParameterStoreServiceTest {
 
   @Parameters
   public static Collection<Object[]> data() {
-    return Arrays.asList(
-      new Object[][] {
-        { /* normal */
-          new String[][] { { "name1", "value1" }, { "name2", "value2" } },
-          null,
-          false,
-          "basename",
-          "",
-          new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+    return Arrays.asList(new Object[][] { { /* normal */
+        new String[][] { { "NAME1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
+        new String[][] { { "NAME1", "value1" }, { "name2", "value2" } }, CREDENTIALS_AWS_ADMIN },
         { /* non-alphanumerics */
-          new String[][] { { "*X()_test", "value1" }, { "123abCD", "value2" }, { "name3","value3" } },
-          null,
-          false,
-          "basename",
-          "",
-          new String[][] { { "_X___TEST", "value1" }, { "123ABCD", "value2" }, { "NAME3", "value3" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "*X()_test", "value1" }, { "123abCD", "value2" }, { "name3", "value3" } }, null, false,
+            "basename", "",
+            new String[][] { { "_X___test", "value1" }, { "123abCD", "value2" }, { "name3", "value3" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* naming = null test */
-          new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" }, {"/ignore/name3", "value3"} },
-          "/service/",
-          true,
-          null,
-          "",
-          new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" }, { "NAME3", null } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" },
+                { "/ignore/name3", "value3" } },
+            "/service/", true, null, "",
+            new String[][] { { "name1", "value1" }, { "name2", "value2" }, { "name3", null } },
+                CREDENTIALS_AWS_ADMIN },
         { /* naming = basename test */
-          new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" }, {"/ignore/name3", "value3"} },
-          "/service/",
-          true,
-          "basename",
-          "",
-          new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" }, { "NAME3", null } },
-          CREDENTIALS_AWS_ADMIN
-        },
-        { /* naming = basename test - no trailing '/'*/
-          new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" }, {"/ignore/name3", "value3"} },
-          "/service",
-          true,
-          "basename",
-          "",
-          new String[][] { { "NAME1", "value1" }, { "NAME2", "value2" }, { "NAME3", null } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" },
+                { "/ignore/name3", "value3" } },
+            "/service/", true, "basename", "",
+            new String[][] { { "name1", "value1" }, { "name2", "value2" }, { "name3", null } }, CREDENTIALS_AWS_ADMIN },
+        { /* naming = basename test - no trailing '/' */
+            new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" },
+                { "/ignore/name3", "value3" } },
+            "/service", true, "basename", "",
+            new String[][] { { "name1", "value1" }, { "name2", "value2" }, { "name3", null } }, CREDENTIALS_AWS_ADMIN },
         { /* naming = absolute test */
-          new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" } },
-          "/service/",
-          true,
-          "absolute",
-          "",
-          new String[][] { { "SERVICE_NAME1", "value1" }, { "SERVICE_NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" } }, "/service/", true,
+            "absolute", "", new String[][] { { "service_name1", "value1" }, { "service_name2", "value2" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* naming = absolute test - no trailing '/' */
-          new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" } },
-          "/service",
-          true,
-          "absolute",
-          "",
-          new String[][] { { "SERVICE_NAME1", "value1" }, { "SERVICE_NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "/service/name1", "value1" }, { "/service/name2", "value2" } }, "/service", true,
+            "absolute", "", new String[][] { { "service_name1", "value1" }, { "service_name2", "value2" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* naming = relative test */
-          new String[][] { { "/service/app/name1", "value1" }, { "/service/name2", "value2" } },
-          "/service/",
-          true,
-          "relative",
-          "",
-          new String[][] { { "APP_NAME1", "value1" }, { "NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "/service/app/name1", "value1" }, { "/service/name2", "value2" } }, "/service/", true,
+            "relative", "", new String[][] { { "app_name1", "value1" }, { "name2", "value2" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* naming = relative test - no trailing '/' */
-          new String[][] { { "/service/app/name1", "value1" }, { "/service/name2", "value2" } },
-          "/service",
-          true,
-          "relative",
-          "",
-          new String[][] { { "APP_NAME1", "value1" }, { "NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "/service/app/name1", "value1" }, { "/service/name2", "value2" } }, "/service", true,
+            "relative", "", new String[][] { { "app_name1", "value1" }, { "name2", "value2" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* namePrefixes = single exact value */
-          new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
-          null,
-          false,
-          null,
-          "prefix1_name1",
-          new String[][] { { "PREFIX1_NAME1", "value1" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } }, null, false, null,
+            "prefix1_name1", new String[][] { { "prefix1_name1", "value1" } }, CREDENTIALS_AWS_ADMIN },
         { /* namePrefixes = single prefix value */
-          new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
-          null,
-          false,
-          null,
-          "prefix",
-          new String[][] { { "PREFIX1_NAME1", "value1" }, { "PREFIX2_NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } }, null, false, null,
+            "prefix", new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* namePrefixes = comma separated multi prefix value */
-          new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
-          null,
-          false,
-          null,
-          "prefix1,prefix2_name2",
-          new String[][] { { "PREFIX1_NAME1", "value1" }, { "PREFIX2_NAME2", "value2" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } }, null, false, null,
+            "prefix1,prefix2_name2", new String[][] { { "prefix1_name1", "value1" }, { "prefix2_name2", "value2" } },
+            CREDENTIALS_AWS_ADMIN },
         { /* empty values */
-          new String[][] { { "name1", "" }, { "name2", null }, { "name3","value3" } },
-          null,
-          false,
-          "basename",
-          "",
-          new String[][] { { "NAME1", "" }, { "NAME2", null }, { "NAME3", "value3" } },
-          CREDENTIALS_AWS_ADMIN
-        },
+            new String[][] { { "name1", "" }, { "name2", null }, { "name3", "value3" } }, null, false, "basename", "",
+            new String[][] { { "name1", "" }, { "name2", null }, { "name3", "value3" } }, CREDENTIALS_AWS_ADMIN },
         { /* no describe */
-          new String[][] { { "name1", "value1" }, { "name2", "value2" } },
-          null,
-          false,
-          "basename",
-          "",
-          new String[][] { { "NAME1", null }, { "NAME2", null } },
-          CREDENTIALS_AWS_NO_DESCRIBE
-        },
+            new String[][] { { "name1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
+            new String[][] { { "name1", null }, { "name2", null } }, CREDENTIALS_AWS_NO_DESCRIBE },
         { /* no get-parameter */
-          new String[][] { { "name1", "value1" }, { "name2", "value2" } },
-          null,
-          false,
-          "basename",
-          "",
-          new String[][] { { "NAME1", null }, { "NAME2", "value2" } },
-          CREDENTIALS_AWS_NO_GET
-        },
+            new String[][] { { "name1", "value1" }, { "name2", "value2" } }, null, false, "basename", "",
+            new String[][] { { "name1", null }, { "name2", "value2" } }, CREDENTIALS_AWS_NO_GET },
         { /* no get-parameter-by-path */
-          new String[][] { { "name1", "value1" }, { "name2", "value2" } },
-          "/service/",
-          true,
-          "basename",
-          "",
-          new String[][] { { "NAME1", null }, { "NAME2", null } },
-          CREDENTIALS_AWS_NO_GETBYPATH
-        }
-      }
-    );
+            new String[][] { { "name1", "value1" }, { "name2", "value2" } }, "/service/", true, "basename", "",
+            new String[][] { { "name1", null }, { "name2", null } }, CREDENTIALS_AWS_NO_GETBYPATH } });
   }
 
   /**
@@ -275,15 +180,16 @@ public class AwsParameterStoreServiceTest {
   }
 
   /**
-   * Tests the <code>describeImages</code> method returns images in a
-   * sorted order.
+   * Tests the <code>describeImages</code> method returns images in a sorted
+   * order.
    */
   @Test
   public void testBuildEnvVars() {
     SimpleBuildWrapper.Context context = new SimpleBuildWrapper.Context();
     AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, REGION_NAME);
-    awsParameterStoreService.buildEnvVars(context, path, recursive, naming, namePrefixes);
-    for(int i = 0; i < expected.length; i++) {
+    awsParameterStoreService.buildEnvVars(context, path, naming,
+        awsParameterStoreService.fetchParameters(path, recursive, namePrefixes));
+    for (int i = 0; i < expected.length; i++) {
       Assert.assertEquals(parameters[i][NAME], expected[i][VALUE], context.getEnv().get(expected[i][NAME]));
     }
   }
@@ -293,75 +199,85 @@ public class AwsParameterStoreServiceTest {
    */
   private void mockAWSCredentialsHelper() {
     PowerMockito.mockStatic(AWSCredentialsHelper.class);
-    PowerMockito.when(AWSCredentialsHelper.getCredentials(Mockito.any(String.class), Mockito.any(hudson.model.ItemGroup.class))).thenReturn(null);
+    PowerMockito
+        .when(AWSCredentialsHelper.getCredentials(Mockito.any(String.class), Mockito.any(hudson.model.ItemGroup.class)))
+        .thenReturn(null);
   }
 
   /**
-   * Mocks the constructor, describeParameters(), getParameter() and getParametersByPath() methods of the <code>AwsSimpleSystemsManagementClient</code>.
+   * Mocks the constructor, describeParameters(), getParameter() and
+   * getParametersByPath() methods of the
+   * <code>AwsSimpleSystemsManagementClient</code>.
    */
   private void mockAWSSimpleSystemsManagementClient() {
-    AWSSimpleSystemsManagementClient awsSimpleSystemsManagementClient = PowerMockito.mock(AWSSimpleSystemsManagementClient.class);
+    AWSSimpleSystemsManagementClient awsSimpleSystemsManagementClient = PowerMockito
+        .mock(AWSSimpleSystemsManagementClient.class);
 
     try {
-      PowerMockito.whenNew(AWSSimpleSystemsManagementClient.class).withAnyArguments().thenReturn(awsSimpleSystemsManagementClient);
-    } catch(Exception e) {
+      PowerMockito.whenNew(AWSSimpleSystemsManagementClient.class).withAnyArguments()
+          .thenReturn(awsSimpleSystemsManagementClient);
+    } catch (Exception e) {
       Assert.fail("Unexpected exception: " + e.getMessage());
     }
 
-    if(CREDENTIALS_AWS_NO_DESCRIBE.equals(credentialsId)) {
-      PowerMockito.when(awsSimpleSystemsManagementClient.describeParameters(Mockito.any(DescribeParametersRequest.class))).thenThrow(
-        new AWSSimpleSystemsManagementException("AccessDenied")
-      );
+    if (CREDENTIALS_AWS_NO_DESCRIBE.equals(credentialsId)) {
+      PowerMockito
+          .when(awsSimpleSystemsManagementClient.describeParameters(Mockito.any(DescribeParametersRequest.class)))
+          .thenThrow(new AWSSimpleSystemsManagementException("AccessDenied"));
     } else {
-      PowerMockito.when(awsSimpleSystemsManagementClient.describeParameters(Mockito.any(DescribeParametersRequest.class))).thenReturn(
-       new DescribeParametersResult().withParameters(mockParameterMetadata())
-      );
+      PowerMockito
+          .when(awsSimpleSystemsManagementClient.describeParameters(Mockito.any(DescribeParametersRequest.class)))
+          .thenReturn(new DescribeParametersResult().withParameters(mockParameterMetadata()));
     }
 
-    if(CREDENTIALS_AWS_NO_GETBYPATH.equals(credentialsId)) {
-      PowerMockito.when(awsSimpleSystemsManagementClient.getParametersByPath(Mockito.any(GetParametersByPathRequest.class))).thenThrow(
-        new AWSSimpleSystemsManagementException("AccessDenied")
-      );
+    if (CREDENTIALS_AWS_NO_GETBYPATH.equals(credentialsId)) {
+      PowerMockito
+          .when(awsSimpleSystemsManagementClient.getParametersByPath(Mockito.any(GetParametersByPathRequest.class)))
+          .thenThrow(new AWSSimpleSystemsManagementException("AccessDenied"));
     } else {
-      PowerMockito.when(awsSimpleSystemsManagementClient.getParametersByPath(Mockito.any(GetParametersByPathRequest.class))).thenReturn(
-        new GetParametersByPathResult().withParameters(mockParameters())
-      );
+      PowerMockito
+          .when(awsSimpleSystemsManagementClient.getParametersByPath(Mockito.any(GetParametersByPathRequest.class)))
+          .thenReturn(new GetParametersByPathResult().withParameters(mockParameters()));
     }
 
-    for(int i = 0; i < parameters.length; i++) {
-      if(CREDENTIALS_AWS_NO_GET.equals(credentialsId) && i == 0) {
-        PowerMockito.when(awsSimpleSystemsManagementClient.getParameter(Mockito.argThat(new GetParameterRequestMatcher(parameters[i][NAME])))).thenThrow(
-          new AWSSimpleSystemsManagementException("AcessDenied")
-        );
+    for (int i = 0; i < parameters.length; i++) {
+      if (CREDENTIALS_AWS_NO_GET.equals(credentialsId) && i == 0) {
+        PowerMockito
+            .when(awsSimpleSystemsManagementClient
+                .getParameter(Mockito.argThat(new GetParameterRequestMatcher(parameters[i][NAME]))))
+            .thenThrow(new AWSSimpleSystemsManagementException("AcessDenied"));
       } else {
-        PowerMockito.when(awsSimpleSystemsManagementClient.getParameter(Mockito.argThat(new GetParameterRequestMatcher(parameters[i][NAME])))).thenReturn(
-          new GetParameterResult().withParameter(new com.amazonaws.services.simplesystemsmanagement.model.Parameter().withValue(parameters[i][VALUE]))
-        );
+        PowerMockito
+            .when(awsSimpleSystemsManagementClient
+                .getParameter(Mockito.argThat(new GetParameterRequestMatcher(parameters[i][NAME]))))
+            .thenReturn(new GetParameterResult()
+                .withParameter(new com.amazonaws.services.simplesystemsmanagement.model.Parameter()
+                    .withValue(parameters[i][VALUE]).withName(parameters[i][NAME])));
       }
     }
   }
 
   /**
-    * Generates <code>ParameterMetadata</code> return values.
-    */
-   private Collection<ParameterMetadata> mockParameterMetadata() {
-     Collection<ParameterMetadata> parameterMetadata = new ArrayList<ParameterMetadata>();
-     for(int i = 0; i < parameters.length; i++) {
-       parameterMetadata.add(new ParameterMetadata().withName(parameters[i][NAME]));
-     }
-     return parameterMetadata;
-   }
+   * Generates <code>ParameterMetadata</code> return values.
+   */
+  private Collection<ParameterMetadata> mockParameterMetadata() {
+    Collection<ParameterMetadata> parameterMetadata = new ArrayList<ParameterMetadata>();
+    for (int i = 0; i < parameters.length; i++) {
+      parameterMetadata.add(new ParameterMetadata().withName(parameters[i][NAME]));
+    }
+    return parameterMetadata;
+  }
 
   /**
    * Generates <code>Parameter</code> return values.
    */
   private List<com.amazonaws.services.simplesystemsmanagement.model.Parameter> mockParameters() {
-    List<com.amazonaws.services.simplesystemsmanagement.model.Parameter> params =
-                 new ArrayList<com.amazonaws.services.simplesystemsmanagement.model.Parameter>();
-    for(int i = 0; i < parameters.length; i++) {
+    List<com.amazonaws.services.simplesystemsmanagement.model.Parameter> params = new ArrayList<com.amazonaws.services.simplesystemsmanagement.model.Parameter>();
+    for (int i = 0; i < parameters.length; i++) {
       String parameterName = parameters[i][NAME];
-      if(isMatchedByNamePrefixes(parameterName) || StringUtils.isEmpty(path) || parameterName.startsWith(path)) {
-        params.add(new com.amazonaws.services.simplesystemsmanagement.model.Parameter().withName(parameterName).withValue(parameters[i][VALUE]));
+      if (isMatchedByNamePrefixes(parameterName) || StringUtils.isEmpty(path) || parameterName.startsWith(path)) {
+        params.add(new com.amazonaws.services.simplesystemsmanagement.model.Parameter().withName(parameterName)
+            .withValue(parameters[i][VALUE]));
       }
     }
     return params;
@@ -374,7 +290,7 @@ public class AwsParameterStoreServiceTest {
     if (StringUtils.isEmpty(namePrefixes)) {
       return false;
     }
-    for (String namePrefix :  namePrefixes.split(",")) {
+    for (String namePrefix : namePrefixes.split(",")) {
       if (parameterName.startsWith(namePrefix)) {
         return true;
       }
@@ -383,8 +299,8 @@ public class AwsParameterStoreServiceTest {
   }
 
   /**
-   * Mocks the static <code>getInstance()</code> and <code>getActiveInstance</code> methods
-   * of the <code>Jenkins</code> class.
+   * Mocks the static <code>getInstance()</code> and
+   * <code>getActiveInstance</code> methods of the <code>Jenkins</code> class.
    */
   private void mockJenkins() {
     Jenkins jenkins = PowerMockito.mock(Jenkins.class);
@@ -406,7 +322,7 @@ public class AwsParameterStoreServiceTest {
     /**
      * Creates a new {@link GetParameterRequestMatcher}.
      *
-     * @param name   parameter name to match
+     * @param name parameter name to match
      */
     public GetParameterRequestMatcher(String name) {
       this.name = name;
@@ -415,11 +331,12 @@ public class AwsParameterStoreServiceTest {
     /**
      * Matches if <code>o</code> is a <code>GetParameterRequest</code> and its name
      * matches <code>name</code>.
-     * @param o  a GetParameterRequest
+     * 
+     * @param o a GetParameterRequest
      */
     public boolean matches(Object o) {
-      if(o instanceof GetParameterRequest) {
-        GetParameterRequest getParameterRequest = (GetParameterRequest)o;
+      if (o instanceof GetParameterRequest) {
+        GetParameterRequest getParameterRequest = (GetParameterRequest) o;
         return getParameterRequest.getName().equals(name);
       } else {
         return false;
