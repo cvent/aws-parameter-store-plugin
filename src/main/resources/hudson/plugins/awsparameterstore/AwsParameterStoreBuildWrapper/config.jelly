@@ -45,5 +45,8 @@
     <f:entry title="${%Hide Secure Strings}" field="hideSecureStrings" description="Remove secure string values from the console">
       <f:checkbox/>
     </f:entry>
+    <f:entry title="${%Option}" field="option" description="Option passed to parameter filter when path is empty">
+      <f:textbox/>
+    </f:entry>
   </f:advanced>
 </j:jelly>

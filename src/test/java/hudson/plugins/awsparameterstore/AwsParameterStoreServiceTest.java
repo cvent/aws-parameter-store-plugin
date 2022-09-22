@@ -23,11 +23,6 @@
   */
 package hudson.plugins.awsparameterstore;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
 import com.amazonaws.services.simplesystemsmanagement.model.AWSSimpleSystemsManagementException;
 import com.amazonaws.services.simplesystemsmanagement.model.DescribeParametersRequest;
@@ -38,7 +33,8 @@ import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathR
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersByPathResult;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterMetadata;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
-
+import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildWrapper;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,8 +50,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 
-import jenkins.model.Jenkins;
-import jenkins.tasks.SimpleBuildWrapper;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Run tests for {@link AwsParameterStoreService}.
@@ -188,7 +186,7 @@ public class AwsParameterStoreServiceTest {
     SimpleBuildWrapper.Context context = new SimpleBuildWrapper.Context();
     AwsParameterStoreService awsParameterStoreService = new AwsParameterStoreService(credentialsId, REGION_NAME);
     awsParameterStoreService.buildEnvVars(context, path, naming,
-        awsParameterStoreService.fetchParameters(path, recursive, namePrefixes));
+        awsParameterStoreService.fetchParameters(path, recursive, namePrefixes, "BeginsWith"));
     for (int i = 0; i < expected.length; i++) {
       Assert.assertEquals(parameters[i][NAME], expected[i][VALUE], context.getEnv().get(expected[i][NAME]));
     }
@@ -331,7 +329,7 @@ public class AwsParameterStoreServiceTest {
     /**
      * Matches if <code>o</code> is a <code>GetParameterRequest</code> and its name
      * matches <code>name</code>.
-     * 
+     *
      * @param o a GetParameterRequest
      */
     public boolean matches(Object o) {
