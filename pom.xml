@@ -97,7 +97,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-java-sdk</artifactId>
-      <version>1.11.264</version>
+      <version>1.12.772-474.v7f79a_2046a_fb_</version>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
